@@ -1,0 +1,94 @@
+---
+title: "simulation"
+output: github_document
+---
+
+
+
+```{r}
+library(tidyverse)
+library(rvest)
+library(readxl)
+```
+
+
+Set seed for reproducibility.
+
+```{r}
+set.seed(2)
+```
+
+
+## Simulation sample and sd
+
+Here's an old function:
+
+```{r}
+sim_mean_sd = function(n, mu = 5, sigma = 1) {
+  
+  sim_data = tibble(
+    x = rnorm(n, mean = mu, sd = sigma),
+  )
+  
+  sim_data |> 
+    summarize(
+      mean = mean(x),
+      sigma_hat = sd(x)
+    )
+}
+```
+
+Let's see what this does.
+
+```{r}
+sim_mean_sd(n = 30)
+```
+
+Let's iterate to see how this works UNDER REPEATED SAMPLING!
+
+```{r}
+output = vector("list", length = 100)
+
+for(i in 1:100) {
+  
+  output[[i]] = sim_mean_sd(n = 30)
+  
+}
+
+sim_results = 
+  bind_rows(output)
+
+sim_results |>
+  ggplot(aes(x = mean)) + geom_density()
+
+sim_results |>
+  summarize(
+    mu_hat = mean(mean),
+    sd_hat = sd(mean)
+  )
+
+
+```
+
+use a map function
+
+```{r}
+sim_result_df =
+  expand_grid(
+    sample_size = c(30, 60, 120, 240),
+    iter = 1:1000
+  ) |>
+  mutate(estimate_df = map(sample_size, sim_mean_sd)) |>
+  unnest(estimate_df)
+
+sim_result_df |>
+  mutate(
+    sample_size = str_c("n = ", sample_size),
+    sample_size = fct_inorder(sample_size) 
+    # arrange in order of `sample_size` in the dataframe
+  ) |>
+  ggplot(aes(x = sample_size, y = mean)) +
+  geom_boxplot()
+
+```
+
